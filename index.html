@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ledger">
+<meta name="theme-color" content="#FBF7EF">
+<title>The Ledger — Guesthouse Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBF7EF;
+    --paper-raised:#FFFEFB;
+    --ink:#2B2620;
+    --ink-soft:#6B6258;
+    --rule:#E3DCC9;
+    --rule-strong:#CFC4A8;
+    --brass:#C2944A;
+    --brass-deep:#9C7530;
+    --red:#A1463D;
+    --red-bg:#F4E6E2;
+    --sage:#5C7A5C;
+    --sage-bg:#E8EEE3;
+    --shadow: 0 1px 2px rgba(43,38,32,0.06), 0 2px 8px rgba(43,38,32,0.05);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);}
+  body{
+    font-family:'Inter',-apple-system,sans-serif;
+    font-size:15px;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:calc(78px + env(safe-area-inset-bottom));
+    padding-top:env(safe-area-inset-top);
+    min-height:100vh;
+    position:relative;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(43,38,32,0.035) 1px, transparent 0);
+    background-size: 14px 14px;
+  }
+  h1,h2,h3{font-family:'Fraunces',serif; margin:0; letter-spacing:-0.01em;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit; cursor:pointer;}
+  ::selection{background:var(--brass); color:#fff;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    background:rgba(251,247,239,0.92);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--rule);
+    padding:14px 18px 12px;
+  }
+  .topbar-row{display:flex; align-items:baseline; justify-content:space-between;}
+  .brand{display:flex; align-items:baseline; gap:8px;}
+  .brand h1{font-size:21px; font-weight:600; font-style:italic;}
+  .brand .dot{width:6px;height:6px;border-radius:50%;background:var(--brass);display:inline-block;}
+  .month-pill{
+    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600;
+    color:var(--brass-deep); background:#fff; border:1px solid var(--rule-strong);
+    padding:5px 10px; border-radius:20px; letter-spacing:0.03em; text-transform:uppercase;
+    display:flex; align-items:center; gap:6px;
+  }
+  .month-pill svg{width:11px;height:11px;}
+
+  .cal-toggle-row{display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:8px;}
+  .cal-toggle-label{font-size:11px; color:var(--ink-soft);}
+  .cal-toggle{display:flex; background:#fff; border:1px solid var(--rule-strong); border-radius:20px; padding:2px; gap:2px;}
+  .cal-toggle-opt{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; padding:4px 10px;
+    border-radius:18px; border:none; background:none; color:var(--ink-soft);
+  }
+  .cal-toggle-opt.selected{background:var(--ink); color:var(--paper);}
+
+  /* ---------- Page container ---------- */
+  .page{padding:18px; max-width:600px; margin:0 auto;}
+  .page-title{font-size:13px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); font-weight:600; margin-bottom:10px;}
+
+  /* ---------- Stamp badge (signature element) ---------- */
+  .stamp{
+    width:42px; height:42px; border-radius:50%;
+    border:1.5px dashed var(--brass-deep);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12.5px;
+    color:var(--brass-deep); flex-shrink:0; background:var(--paper-raised);
+    transform:rotate(-3deg);
+  }
+  .stamp.occupied{border-style:solid; border-color:var(--red); color:var(--red); background:var(--red-bg);}
+  .stamp.vacant{border-style:dashed; border-color:var(--sage); color:var(--sage); background:var(--sage-bg);}
+  .stamp.sm{width:32px;height:32px;font-size:10.5px;}
+
+  /* ---------- Cards ---------- */
+  .card{
+    background:var(--paper-raised); border:1px solid var(--rule);
+    border-radius:14px; padding:14px; box-shadow:var(--shadow);
+  }
+  .card + .card{margin-top:10px;}
+
+  /* ---------- Summary strip ---------- */
+  .summary-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px;}
+  .sum-box{background:var(--paper-raised); border:1px solid var(--rule); border-radius:12px; padding:11px 10px; text-align:left;}
+  .sum-box .label{font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); font-weight:600;}
+  .sum-box .value{font-family:'JetBrains Mono',monospace; font-size:17px; font-weight:700; margin-top:3px;}
+  .sum-box.due .value{color:var(--red);}
+  .sum-box.collected .value{color:var(--sage);}
+
+  /* ---------- Booking row ---------- */
+  .booking{display:flex; gap:11px; align-items:flex-start; padding:11px 0; border-bottom:1px solid var(--rule);}
+  .booking:last-child{border-bottom:none;}
+  .booking-main{flex:1; min-width:0;}
+  .booking-top{display:flex; justify-content:space-between; align-items:baseline; gap:8px;}
+  .tenant{font-weight:600; font-size:14.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .rent{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14.5px; white-space:nowrap;}
+  .booking-sub{font-size:12px; color:var(--ink-soft); margin-top:2px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+  .tag{font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; padding:2px 7px; border-radius:20px;}
+  .tag.paid{background:var(--sage-bg); color:var(--sage);}
+  .tag.partial{background:#FBF0DD; color:var(--brass-deep);}
+  .tag.due{background:var(--red-bg); color:var(--red);}
+
+  /* ---------- Empty state ---------- */
+  .empty{text-align:center; padding:50px 20px; color:var(--ink-soft);}
+  .empty svg{width:38px;height:38px; opacity:0.35; margin-bottom:10px;}
+  .empty .t{font-family:'Fraunces',serif; font-style:italic; font-size:17px; color:var(--ink); margin-bottom:4px;}
+  .empty .s{font-size:13px; max-width:260px; margin:0 auto;}
+
+  /* ---------- FAB ---------- */
+  .fab{
+    position:fixed; right:18px; bottom:calc(92px + env(safe-area-inset-bottom));
+    width:54px; height:54px; border-radius:50%; background:var(--ink);
+    color:var(--paper); border:none; box-shadow:0 4px 14px rgba(43,38,32,0.3);
+    display:flex; align-items:center; justify-content:center; z-index:30;
+    transition:transform 0.15s ease;
+  }
+  .fab:active{transform:scale(0.92);}
+  .fab svg{width:24px;height:24px;}
+
+  /* ---------- Tab bar ---------- */
+  .tabbar{
+    position:fixed; bottom:0; left:0; right:0; z-index:25;
+    background:rgba(251,247,239,0.94); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-top:1px solid var(--rule);
+    padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+    display:flex; justify-content:space-around;
+  }
+  .tab{
+    background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px;
+    color:var(--ink-soft); padding:4px 4px; flex:1; max-width:74px;
+  }
+  .tab svg{width:20px;height:20px;}
+  .tab span{font-size:9.5px; font-weight:600;}
+  .tab.active{color:var(--red);}
+
+  /* ---------- Modal / sheet ---------- */
+  .sheet-backdrop{
+    position:fixed; inset:0; background:rgba(43,38,32,0.4); z-index:50;
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .sheet-backdrop.open{display:flex;}
+  .sheet{
+    background:var(--paper); width:100%; max-width:600px; border-radius:20px 20px 0 0;
+    max-height:88vh; overflow-y:auto; padding:18px 18px calc(24px + env(safe-area-inset-bottom));
+    animation:slideUp 0.22s ease;
+  }
+  @keyframes slideUp{from{transform:translateY(100%);} to{transform:translateY(0);}}
+  .sheet-handle{width:36px;height:4px;background:var(--rule-strong);border-radius:4px;margin:0 auto 14px;}
+  .sheet h2{font-size:19px; font-weight:600; font-style:italic; margin-bottom:14px;}
+  .field{margin-bottom:13px;}
+  .field label{display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-soft); font-weight:600; margin-bottom:6px;}
+  .field input, .field select{
+    width:100%; padding:11px 12px; border:1px solid var(--rule-strong); border-radius:10px;
+    background:#fff; font-size:15px; font-family:inherit; color:var(--ink);
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--brass);}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .room-picker{display:flex; gap:8px; flex-wrap:wrap;}
+  .room-opt{
+    border:1.5px solid var(--rule-strong); border-radius:10px; padding:8px 12px;
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:13px; background:#fff; color:var(--ink-soft);
+  }
+  .room-opt.selected{border-color:var(--red); color:var(--red); background:var(--red-bg);}
+  .btn-primary{
+    width:100%; padding:14px; border-radius:12px; background:var(--ink); color:var(--paper);
+    border:none; font-weight:600; font-size:15px; margin-top:6px;
+  }
+  .btn-primary:active{opacity:0.85;}
+  .btn-row{display:flex; gap:10px; margin-top:14px;}
+  .btn-row .btn-primary{margin-top:0;}
+  .btn-ghost{
+    flex:1; padding:14px; border-radius:12px; background:none; border:1.5px solid var(--rule-strong);
+    color:var(--ink-soft); font-weight:600; font-size:14px;
+  }
+  .status-picker{display:flex; gap:8px;}
+  .status-opt{flex:1; padding:9px; border-radius:10px; border:1.5px solid var(--rule-strong); font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; background:#fff; color:var(--ink-soft);}
+  .status-opt.selected.paid{border-color:var(--sage); background:var(--sage-bg); color:var(--sage);}
+  .status-opt.selected.partial{border-color:var(--brass-deep); background:#FBF0DD; color:var(--brass-deep);}
+  .status-opt.selected.due{border-color:var(--red); background:var(--red-bg); color:var(--red);}
+
+  /* ---------- Chart page ---------- */
+  .chart-wrap{background:var(--paper-raised); border:1px solid var(--rule); border-radius:14px; padding:16px; margin-bottom:12px;}
+  .chart-title{font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); font-weight:600; margin-bottom:12px;}
+  .bar-row{display:flex; align-items:center; gap:10px; margin-bottom:9px;}
+  .bar-label{width:62px; font-size:11.5px; color:var(--ink-soft); font-family:'JetBrains Mono',monospace; flex-shrink:0;}
+  .bar-track{flex:1; height:18px; background:var(--rule); border-radius:4px; overflow:hidden; position:relative;}
+  .bar-fill{height:100%; background:linear-gradient(90deg, var(--brass), var(--red)); border-radius:4px; transition:width 0.4s ease;}
+  .bar-val{width:64px; text-align:right; font-family:'JetBrains Mono',monospace; font-size:11.5px; font-weight:700; flex-shrink:0;}
+
+  .room-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px;}
+  .room-card{background:var(--paper-raised); border:1px solid var(--rule); border-radius:14px; padding:13px; box-shadow:var(--shadow);}
+  .room-card .top{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;}
+  .room-card .meta{font-size:11.5px; color:var(--ink-soft); line-height:1.5;}
+  .room-card .meta b{color:var(--ink); font-family:'JetBrains Mono',monospace;}
+
+  .section-divider{display:flex; align-items:center; gap:8px; margin:20px 0 12px; color:var(--ink-soft);}
+  .section-divider .line{flex:1; height:1px; background:var(--rule);}
+  .section-divider span{font-size:11px; text-transform:uppercase; letter-spacing:0.07em; font-weight:600;}
+
+  /* ---------- Expenses ---------- */
+  .cat-chip{
+    display:inline-flex; align-items:center; font-size:10px; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.04em; padding:2px 8px; border-radius:20px; background:#EFE9DA; color:var(--ink-soft);
+  }
+  .expense-amt{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14.5px; white-space:nowrap; color:var(--red);}
+  .cat-picker{display:flex; gap:8px; flex-wrap:wrap;}
+  .cat-opt{
+    border:1.5px solid var(--rule-strong); border-radius:10px; padding:8px 12px;
+    font-size:12.5px; font-weight:600; background:#fff; color:var(--ink-soft);
+  }
+  .cat-opt.selected{border-color:var(--brass-deep); color:var(--brass-deep); background:#FBF0DD;}
+  .net-box .value{font-size:17px;}
+  .net-box.positive .value{color:var(--sage);}
+  .net-box.negative .value{color:var(--red);}
+
+  .swipe-hint{font-size:11px; color:var(--ink-soft); text-align:center; margin-top:6px;}
+
+  /* ---------- OTA Sync ---------- */
+  .sync-btn{
+    width:100%; display:flex; align-items:center; justify-content:center; gap:8px;
+    padding:11px; border-radius:12px; border:1.5px dashed var(--rule-strong);
+    background:var(--paper-raised); color:var(--ink); font-weight:600; font-size:13.5px;
+    margin-bottom:14px;
+  }
+  .sync-btn svg{width:16px;height:16px;}
+  .sync-btn:active{opacity:0.7;}
+  .sync-btn .spin{animation:spin 0.9s linear infinite;}
+  .sync-room-group{margin-bottom:4px;}
+  .sync-room-head{
+    display:flex; align-items:center; gap:8px; padding:10px 0 6px;
+    font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--ink-soft);
+  }
+  .sync-item{
+    display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--rule);
+  }
+  .sync-item:last-child{border-bottom:none;}
+  .sync-item .info{flex:1; min-width:0;}
+  .sync-item .dates{font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600;}
+  .sync-item .src{font-size:11px; color:var(--ink-soft); text-transform:capitalize;}
+  .sync-add-btn{
+    flex-shrink:0; padding:7px 12px; border-radius:9px; border:1.5px solid var(--sage); background:var(--sage-bg);
+    color:var(--sage); font-weight:700; font-size:12px;
+  }
+  .sync-add-btn.added{border-color:var(--rule-strong); background:transparent; color:var(--ink-soft);}
+  .sync-empty{text-align:center; padding:30px 16px; color:var(--ink-soft); font-size:13px;}
+
+  /* ---------- Receipt capture ---------- */
+  .receipt-slot{
+    border:1.5px dashed var(--rule-strong); border-radius:12px; background:var(--paper-raised);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:18px 14px; gap:8px; text-align:center;
+  }
+  .receipt-slot .icon-circle{
+    width:38px; height:38px; border-radius:50%; background:#FBF0DD; border:1px solid var(--rule-strong);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .receipt-slot .icon-circle svg{width:18px;height:18px; color:var(--brass-deep);}
+  .receipt-slot .hint{font-size:11.5px; color:var(--ink-soft);}
+  .receipt-btn-row{display:flex; gap:8px; width:100%; margin-top:4px;}
+  .receipt-btn{
+    flex:1; padding:9px 8px; border-radius:9px; border:1.5px solid var(--rule-strong);
+    background:#fff; font-size:12px; font-weight:700; color:var(--ink);
+    display:flex; align-items:center; justify-content:center; gap:5px;
+  }
+  .receipt-btn svg{width:14px;height:14px;}
+  .receipt-btn.scan{border-color:var(--brass-deep); color:var(--brass-deep); background:#FBF0DD;} /* retained for potential future use */
+  .receipt-preview{position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--rule);}
+  .receipt-preview img{width:100%; max-height:220px; object-fit:cover; display:block;}
+  .receipt-preview .remove-receipt{
+    position:absolute; top:8px; right:8px; width:28px; height:28px; border-radius:50%;
+    background:rgba(43,38,32,0.65); color:#fff; display:flex; align-items:center; justify-content:center; border:none;
+  }
+  .receipt-preview .remove-receipt svg{width:14px;height:14px;}
+  .scan-status{
+    display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:10px;
+    background:#FBF0DD; border:1px solid var(--rule-strong); font-size:12.5px; color:var(--brass-deep); font-weight:600;
+  }
+  .scan-status.error{background:var(--red-bg); color:var(--red); border-color:var(--red);}
+  .spinner{
+    width:14px; height:14px; border-radius:50%; border:2px solid rgba(156,117,48,0.25); border-top-color:var(--brass-deep);
+    animation:spin 0.7s linear infinite; flex-shrink:0;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .receipt-thumb-link{font-size:11px; color:var(--brass-deep); text-decoration:underline; font-weight:600;}
+
+  /* ---------- Dual calendar date entry ---------- */
+  .date-field-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
+  .date-field-head label{margin-bottom:0;}
+  .cal-mini-toggle{display:flex; background:#fff; border:1px solid var(--rule-strong); border-radius:14px; padding:2px;}
+  .cal-mini-opt{font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:12px; border:none; background:none; color:var(--ink-soft);}
+  .cal-mini-opt.selected{background:var(--brass-deep); color:#fff;}
+  .bs-select-row{display:grid; grid-template-columns:1fr 1.3fr 1fr; gap:6px;}
+  .bs-select-row select{padding:10px 6px; font-size:13px;}
+  .date-convert-preview{font-size:11px; color:var(--brass-deep); margin-top:5px; font-family:'JetBrains Mono',monospace;}
+  .date-convert-preview.invalid{color:var(--red);}
+
+  .toast{
+    position:fixed; bottom:calc(100px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+    background:var(--ink); color:var(--paper); padding:10px 18px; border-radius:30px; font-size:13px; font-weight:600;
+    z-index:60; opacity:0; transition:opacity 0.25s, transform 0.25s; pointer-events:none;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(-6px);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-row">
+    <div class="brand"><span class="dot"></span><h1>The Ledger</h1></div>
+    <div class="month-pill" id="monthPill">Baisakh 2083</div>
+  </div>
+  <div class="cal-toggle-row">
+    <span class="cal-toggle-label">Dates shown in</span>
+    <div class="cal-toggle" id="calToggle">
+      <button type="button" class="cal-toggle-opt" data-fmt="AD">A.D.</button>
+      <button type="button" class="cal-toggle-opt" data-fmt="BS">B.S.</button>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="page"></div>
+
+<button class="fab" id="fabAdd" aria-label="Add booking">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<div class="tabbar">
+  <button class="tab active" data-tab="bookings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a1 1 0 0 1 1-1h11l4 4v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z"/><path d="M8 8h6M8 12h8M8 16h5"/></svg>
+    <span>Bookings</span>
+  </button>
+  <button class="tab" data-tab="rooms">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span>Rooms</span>
+  </button>
+  <button class="tab" data-tab="expenses">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4Z"/></svg>
+    <span>Expenses</span>
+  </button>
+  <button class="tab" data-tab="charts">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-5 3 3 5-7"/></svg>
+    <span>Revenue</span>
+  </button>
+  <button class="tab" data-tab="months">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+    <span>Months</span>
+  </button>
+</div>
+
+<div class="sheet-backdrop" id="sheetBackdrop">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ DATA LAYER ============ */
+const ROOMS = ["101","102","201","202","203","301","302"];
+const NEPALI_MONTHS = ["Baisakh","Jestha","Asadh","Shrawan","Vadra","Ashoj","Kartik","Mangsir","Poush","Magh","Falgun","Chaitra"];
+const NEPALI_MONTHS_SHORT = ["Bai","Jes","Asa","Shr","Bha","Aso","Kar","Man","Pou","Mag","Fal","Cha"];
+const STORE_KEY = "ledger_bookings_v1";
+const STATE_KEY = "ledger_state_v1";
+const SYNC_WORKER_URL = "https://ledger-sync.mejiwan19.workers.dev";
+const SYNC_IGNORED_KEY = "ledger_sync_ignored_v1"; // UIDs the person chose to skip, so they don't reappear every sync
+
+/* ---------- Bikram Sambat <-> Gregorian conversion ----------
+   Reference data: days-in-month for BS 1970-2090 (covers AD ~1913-2034),
+   sourced from the widely-used medic/bikram-sambat conversion tables.
+   Epoch: 1 Baisakh 1970 BS = 13 April 1913 AD (verified against multiple
+   independent converters). All internal date math below is exact, not
+   approximated — no fixed-offset shortcuts. */
+const DAYS_IN_MONTH_BS = {
+1970:[31,31,32,31,31,31,30,29,30,29,30,30], 1971:[31,31,32,31,32,30,30,29,30,29,30,30],
+1972:[31,32,31,32,31,30,30,30,29,29,30,31], 1973:[30,32,31,32,31,30,30,30,29,30,29,31],
+1974:[31,31,32,31,31,31,30,29,30,29,30,30], 1975:[31,31,32,32,30,31,30,29,30,29,30,30],
+1976:[31,32,31,32,31,30,30,30,29,29,30,31], 1977:[30,32,31,32,31,30,30,30,29,30,29,31],
+1978:[31,31,32,31,31,31,30,29,30,29,30,30], 1979:[31,31,32,32,31,30,30,29,30,29,30,30],
+1980:[31,32,31,32,31,30,30,30,29,29,30,31], 1981:[31,31,31,32,31,31,29,30,30,29,30,30],
+1982:[31,31,32,31,31,31,30,29,30,29,30,30], 1983:[31,31,32,32,31,30,30,29,30,29,30,30],
+1984:[31,32,31,32,31,30,30,30,29,29,30,31], 1985:[31,31,31,32,31,31,29,30,30,29,30,30],
+1986:[31,31,32,31,31,31,30,29,30,29,30,30], 1987:[31,32,31,32,31,30,30,29,30,29,30,30],
+1988:[31,32,31,32,31,30,30,30,29,29,30,31], 1989:[31,31,31,32,31,31,30,29,30,29,30,30],
+1990:[31,31,32,31,31,31,30,29,30,29,30,30], 1991:[31,32,31,32,31,30,30,29,30,29,30,30],
+1992:[31,32,31,32,31,30,30,30,29,30,29,31], 1993:[31,31,31,32,31,31,30,29,30,29,30,30],
+1994:[31,31,32,31,31,31,30,29,30,29,30,30], 1995:[31,32,31,32,31,30,30,30,29,29,30,30],
+1996:[31,32,31,32,31,30,30,30,29,30,29,31], 1997:[31,31,32,31,31,31,30,29,30,29,30,30],
+1998:[31,31,32,31,31,31,30,29,30,29,30,30], 1999:[31,32,31,32,31,30,30,30,29,29,30,31],
+2000:[30,32,31,32,31,30,30,30,29,30,29,31], 2001:[31,31,32,31,31,31,30,29,30,29,30,30],
+2002:[31,31,32,32,31,30,30,29,30,29,30,30], 2003:[31,32,31,32,31,30,30,30,29,29,30,31],
+2004:[30,32,31,32,31,30,30,30,29,30,29,31], 2005:[31,31,32,31,31,31,30,29,30,29,30,30],
+2006:[31,31,32,32,31,30,30,29,30,29,30,30], 2007:[31,32,31,32,31,30,30,30,29,29,30,31],
+2008:[31,31,31,32,31,31,29,30,30,29,29,31], 2009:[31,31,32,31,31,31,30,29,30,29,30,30],
+2010:[31,31,32,32,31,30,30,29,30,29,30,30], 2011:[31,32,31,32,31,30,30,30,29,29,30,31],
+2012:[31,31,31,32,31,31,29,30,30,29,30,30], 2013:[31,31,32,31,31,31,30,29,30,29,30,30],
+2014:[31,31,32,32,31,30,30,29,30,29,30,30], 2015:[31,32,31,32,31,30,30,30,29,29,30,31],
+2016:[31,31,31,32,31,31,29,30,30,29,30,30], 2017:[31,31,32,31,31,31,30,29,30,29,30,30],
+2018:[31,32,31,32,31,30,30,29,30,29,30,30], 2019:[31,32,31,32,31,30,30,30,29,30,29,31],
+2020:[31,31,31,32,31,31,30,29,30,29,30,30], 2021:[31,31,32,31,31,31,30,29,30,29,30,30],
+2022:[31,32,31,32,31,30,30,30,29,29,30,30], 2023:[31,32,31,32,31,30,30,30,29,30,29,31],
+2024:[31,31,31,32,31,31,30,29,30,29,30,30], 2025:[31,31,32,31,31,31,30,29,30,29,30,30],
+2026:[31,32,31,32,31,30,30,30,29,29,30,31], 2027:[30,32,31,32,31,30,30,30,29,30,29,31],
+2028:[31,31,32,31,31,31,30,29,30,29,30,30], 2029:[31,31,32,31,32,30,30,29,30,29,30,30],
+2030:[31,32,31,32,31,30,30,30,29,29,30,31], 2031:[30,32,31,32,31,30,30,30,29,30,29,31],
+2032:[31,31,32,31,31,31,30,29,30,29,30,30], 2033:[31,31,32,32,31,30,30,29,30,29,30,30],
+2034:[31,32,31,32,31,30,30,30,29,29,30,31], 2035:[30,32,31,32,31,31,29,30,30,29,29,31],
+2036:[31,31,32,31,31,31,30,29,30,29,30,30], 2037:[31,31,32,32,31,30,30,29,30,29,30,30],
+2038:[31,32,31,32,31,30,30,30,29,29,30,31], 2039:[31,31,31,32,31,31,29,30,30,29,30,30],
+2040:[31,31,32,31,31,31,30,29,30,29,30,30], 2041:[31,31,32,32,31,30,30,29,30,29,30,30],
+2042:[31,32,31,32,31,30,30,30,29,29,30,31], 2043:[31,31,31,32,31,31,29,30,30,29,30,30],
+2044:[31,31,32,31,31,31,30,29,30,29,30,30], 2045:[31,32,31,32,31,30,30,29,30,29,30,30],
+2046:[31,32,31,32,31,30,30,30,29,29,30,31], 2047:[31,31,31,32,31,31,30,29,30,29,30,30],
+2048:[31,31,32,31,31,31,30,29,30,29,30,30], 2049:[31,32,31,32,31,30,30,30,29,29,30,30],
+2050:[31,32,31,32,31,30,30,30,29,30,29,31], 2051:[31,31,31,32,31,31,30,29,30,29,30,30],
+2052:[31,31,32,31,31,31,30,29,30,29,30,30], 2053:[31,32,31,32,31,30,30,30,29,29,30,30],
+2054:[31,32,31,32,31,30,30,30,29,30,29,31], 2055:[31,31,32,31,31,31,30,29,30,29,30,30],
+2056:[31,31,32,31,32,30,30,29,30,29,30,30], 2057:[31,32,31,32,31,30,30,30,29,29,30,31],
+2058:[30,32,31,32,31,30,30,30,29,30,29,31], 2059:[31,31,32,31,31,31,30,29,30,29,30,30],
+2060:[31,31,32,32,31,30,30,29,30,29,30,30], 2061:[31,32,31,32,31,30,30,30,29,29,30,31],
+2062:[30,32,31,32,31,31,29,30,29,30,29,31], 2063:[31,31,32,31,31,31,30,29,30,29,30,30],
+2064:[31,31,32,32,31,30,30,29,30,29,30,30], 2065:[31,32,31,32,31,30,30,30,29,29,30,31],
+2066:[31,31,31,32,31,31,29,30,30,29,29,31], 2067:[31,31,32,31,31,31,30,29,30,29,30,30],
+2068:[31,31,32,32,31,30,30,29,30,29,30,30], 2069:[31,32,31,32,31,30,30,30,29,29,30,31],
+2070:[31,31,31,32,31,31,29,30,30,29,30,30], 2071:[31,31,32,31,31,31,30,29,30,29,30,30],
+2072:[31,32,31,32,31,30,30,29,30,29,30,30], 2073:[31,32,31,32,31,30,30,30,29,29,30,31],
+2074:[31,31,31,32,31,31,30,29,30,29,30,30], 2075:[31,31,32,31,31,31,30,29,30,29,30,30],
+2076:[31,32,31,32,31,30,30,30,29,29,30,30], 2077:[31,32,31,32,31,30,30,30,29,30,29,31],
+2078:[31,31,31,32,31,31,30,29,30,29,30,30], 2079:[31,31,32,31,31,31,30,29,30,29,30,30],
+2080:[31,32,31,32,31,30,30,30,29,29,30,30], 2081:[31,32,31,32,31,30,30,30,29,30,29,31],
+2082:[31,31,32,31,31,31,30,29,30,29,30,30], 2083:[31,31,32,31,31,30,30,30,29,30,30,30],
+2084:[31,31,32,31,31,30,30,30,29,30,30,30], 2085:[31,32,31,32,30,31,30,30,29,30,30,30],
+2086:[30,32,31,32,31,30,30,30,29,30,30,30], 2087:[31,31,32,31,31,31,30,30,29,30,30,30],
+2088:[30,31,32,32,30,31,30,30,29,30,30,30], 2089:[30,32,31,32,31,30,30,30,29,30,30,30],
+2090:[30,32,31,32,31,30,30,30,29,30,30,30]
+};
+const BS_EPOCH_YEAR = 1970;
+const BS_EPOCH_AD_MS = Date.UTC(1913, 3, 13); // 13 April 1913 = 1 Baisakh 1970 BS
+const BS_MIN_YEAR = 1970, BS_MAX_YEAR = 2089; // last year with full 12-month data available
+
+function bsDaysInMonth(year, month){
+  const arr = DAYS_IN_MONTH_BS[year];
+  return arr ? arr[month-1] : null;
+}
+// True Gregorian (AD) ISO date -> {year,month,day} in Bikram Sambat
+function adToBs(adIso){
+  const target = Date.UTC(...adIso.split('-').map((v,i)=> i===1 ? Number(v)-1 : Number(v)));
+  let days = Math.round((target - BS_EPOCH_AD_MS) / 86400000);
+  if(days < 0) return null;
+  let year = BS_EPOCH_YEAR;
+  while(year <= BS_MAX_YEAR){
+    const monthsArr = DAYS_IN_MONTH_BS[year];
+    if(!monthsArr) return null;
+    for(let m=0;m<12;m++){
+      const dim = monthsArr[m];
+      if(days < dim) return {year, month:m+1, day:days+1};
+      days -= dim;
+    }
+    year++;
+  }
+  return null;
+}
+// Bikram Sambat {year,month,day} -> true Gregorian (AD) ISO date string
+function bsToAdIso(year, month, day){
+  if(year < BS_MIN_YEAR || year > BS_MAX_YEAR) return null;
+  const monthsArr = DAYS_IN_MONTH_BS[year];
+  if(!monthsArr || month<1 || month>12 || day<1 || day>monthsArr[month-1]) return null;
+  let totalDays = 0;
+  for(let y=BS_EPOCH_YEAR; y<year; y++){
+    const arr = DAYS_IN_MONTH_BS[y];
+    if(!arr) return null;
+    totalDays += arr.reduce((a,b)=>a+b,0);
+  }
+  for(let m=0; m<month-1; m++) totalDays += monthsArr[m];
+  totalDays += (day-1);
+  const ms = BS_EPOCH_AD_MS + totalDays*86400000;
+  const d = new Date(ms);
+  const yy = d.getUTCFullYear(), mm = String(d.getUTCMonth()+1).padStart(2,'0'), dd = String(d.getUTCDate()).padStart(2,'0');
+  return `${yy}-${mm}-${dd}`;
+}
+function bsIsoToAdIso(bsIso){
+  if(!bsIso) return null;
+  const [y,m,d] = bsIso.split('-').map(Number);
+  return bsToAdIso(y,m,d);
+}
+function adIsoToBsIso(adIso){
+  if(!adIso) return null;
+  const bs = adToBs(adIso);
+  if(!bs) return null;
+  return `${bs.year}-${String(bs.month).padStart(2,'0')}-${String(bs.day).padStart(2,'0')}`;
+}
+// Convert a stored date (which may itself be tagged AD or BS) to a true AD iso string for math
+function toTrueAdIso(dateStr, cal){
+  if(!dateStr) return null;
+  return cal === 'BS' ? bsIsoToAdIso(dateStr) : dateStr;
+}
+// Format a stored date for DISPLAY in the user's chosen display calendar
+function displayDate(dateStr, cal){
+  if(!dateStr) return '—';
+  const trueAd = toTrueAdIso(dateStr, cal);
+  if(!trueAd) return '—';
+  if(state.dateFormat === 'BS'){
+    const bsIso = adIsoToBsIso(trueAd);
+    if(!bsIso) return '—';
+    const [y,m,d] = bsIso.split('-');
+    return `${d}.${m}.${y} BS`;
+  } else {
+    const [y,m,d] = trueAd.split('-');
+    return `${d}.${m}.${y} AD`;
+  }
+}
+
+function loadBookings(){
+  try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || seedData(); }
+  catch(e){ return seedData(); }
+}
+function saveBookings(){ localStorage.setItem(STORE_KEY, JSON.stringify(bookings)); }
+
+const EXPENSE_KEY = "ledger_expenses_v1";
+function loadExpenses(){
+  try{ return JSON.parse(localStorage.getItem(EXPENSE_KEY)) || seedExpenses(); }
+  catch(e){ return seedExpenses(); }
+}
+function saveExpenses(){ localStorage.setItem(EXPENSE_KEY, JSON.stringify(expenses)); }
+const EXPENSE_CATEGORIES = ["Utilities","Supplies","Maintenance","Staff","Food & Kitchen","Store Purchase","Other"];
+
+function seedExpenses(){
+  const e = (amount, category, vendor, paidBy, method, month, note) => ({
+    id: Math.random().toString(36).slice(2,9),
+    amount, category, vendor: vendor||"", paidBy: paidBy||"", method: method||"Cash", month, note: note||""
+  });
+  return [
+    e(38200, "Store Purchase", "", "Jeewan", "Cash", 0, "Store purchases — Baisakh"),
+    e(150, "Utilities", "", "Sarina", "Cash", 1, "Utility charge on Shubham Kashyap booking"),
+    e(9300, "Store Purchase", "", "Jeewan", "Cash", 1, "Store purchases — Jestha"),
+    e(17840, "Store Purchase", "", "Jeewan", "Cash", 2, "Store purchases — Asadh"),
+  ];
+}
+function loadState(){
+  try{
+    const s = JSON.parse(localStorage.getItem(STATE_KEY)) || {};
+    return { month: s.month ?? 0, tab: s.tab ?? "bookings", dateFormat: s.dateFormat ?? "AD" };
+  }
+  catch(e){ return {month:0, tab:"bookings", dateFormat:"AD"}; }
+}
+function saveState(){ localStorage.setItem(STATE_KEY, JSON.stringify(state)); }
+
+// Seed with the existing 2083 ledger data so it's not starting empty
+function seedData(){
+  const d = (room, name, ci, co, base, collected, channel, pay, month, due) => ({
+    id: Math.random().toString(36).slice(2,9),
+    room, name, checkIn: ci, checkOut: co, cal: 'BS', base: base, collected: collected,
+    channel: channel||"Direct", pay: pay||"Cash", due: due||0, month: month
+  });
+
+  const month0 = [
+    d("301","Lea Morrin","2082-12-29","2083-01-01",2100,2100,"Booking","Cash",0),
+    d("102","Bishal Chhetri","2083-01-01","2083-01-02",1250,1250,"Booking","Cash",0),
+    d("302","Saramsha","2082-12-01","2083-01-01",15500,15500,"Booking","Esewa",0),
+    d("301","Chinese Lady","2083-01-01","2083-01-03",2000,2000,"Booking","Cash",0),
+    d("301","Netherland","2083-01-03","2083-01-04",1300,1300,"Booking","Cash",0),
+    d("301","Antay","2083-01-04","2083-01-05",1050,1050,"Booking","Cash",0),
+    d("301","Akash Sharma","2083-01-10","2083-01-12",3000,3000,"Booking","Cash",0),
+    d("301","Liubna Zhuravel","2083-01-19","2083-02-17",31850,31850,"Booking","Cash",0),
+    d("102","Chinese (Nora)","2083-01-19","2083-02-20",30000,30000,"Booking","Esewa",0),
+    d("203","Nepali Couple","2083-01-20","2083-01-26",7200,7200,"Booking","Esewa",0),
+    d("201","Aanand vai","2083-12-15","2083-01-15",15500,15500,"Booking","Esewa",0),
+  ];
+
+  const month1 = [
+    d("202","Shubham Kashyap","2083-02-13","2083-02-15",1750,1750,"Booking","Cash",1,150),
+    d("102","Abhishek Nayak","2083-02-18","2083-02-19",1000,1000,"Booking","Phonepay",1),
+    d("203","Bijay Kumavai","2083-02-18","2083-02-19",1400,1400,"Booking","Phonepay",1),
+    d("202","Nitesh Khadka","2083-02-16","2083-02-18",2700,2700,"Direct","Esewa",1),
+    d("301","Nitesh Khadka","2083-02-19","2083-02-20",3700,3700,"Direct","Esewa",1),
+    d("102","Nitesh Khadka","2083-02-21","2083-02-24",2600,2600,"Direct","Esewa",1),
+    d("203","Nirbhay Mishra","2083-02-24","2083-02-25",4000,4000,"Agoda","Cash",1),
+    d("202","Nep1","2083-02-22","2083-02-25",3600,3600,"Direct","Esewa",1),
+    d("203","Yash","2083-02-22","2083-02-23",1500,1500,"Booking","Phonepay",1),
+    d("302","Saramsha","2083-01-01","2083-02-01",15500,15500,"Booking","Nabil Bank",1),
+    d("102","Dhiraj Pote","2083-02-15","2083-02-21",4285,4285,"Agoda","Agoda",1),
+    d("102","Lingjian Kong","2083-02-26","2083-03-07",9550,9550,"Booking","Cash",1),
+    d("301","Ankit","2083-02-26","2083-03-27",1650,1650,"Agoda","Cash and Agoda",1),
+    d("203","Andrew","2083-02-27","2083-03-30",5400,5400,"Direct","Atm",1),
+    d("202","Supriya Singh","2083-02-28","2083-03-01",3300,3300,"Booking","Cash",1),
+    d("301","Karuna Mithraa","2083-02-24","2083-02-25",1500,1500,"Booking","Cash",1),
+    d("202","Saunghyeon Ryoo","2083-02-27","2083-03-01",4280,4280,"Agoda","Agoda",1),
+    d("201","Anand Vai","2083-01-15","2083-02-31",22500,22500,"Direct","Esewa",1),
+    d("301","Karan Thapa","2083-02-23","2083-02-24",1300,1300,"Booking","Cash",1),
+  ];
+
+  const month2 = [
+    d("101","Somapta Shah","2083-03-01","2083-03-16",27200,4800,"Direct","Cash",2,22400),
+    d("301","Yeu Wu","2083-03-12","2083-03-14",2000,0,"","",2),
+    d("203","Abdu Xukur","2083-03-03","2083-03-04",1170,1170,"Agoda","Agoda",2),
+    d("302","Saramsha","2083-02-01","2083-03-01",15500,15500,"Direct","Nabil Bank",2),
+    d("203","Honglin liu","2083-03-04","2083-03-05",1170,1170,"Agoda","Agoda",2),
+    d("101","Bret Bernard","2083-03-17","2083-04-14",53500,0,"","",2),
+  ];
+
+  return month0.concat(month1).concat(month2);
+}
+
+let bookings = loadBookings();
+let expenses = loadExpenses();
+let state = loadState();
+let editingId = null;
+let editingExpenseId = null;
+
+/* ============ HELPERS ============ */
+function fmt(n){ return Number(n||0).toLocaleString('en-IN'); }
+function statusOf(b){
+  if(b.collected >= b.base && b.base>0) return "paid";
+  if(b.collected > 0) return "partial";
+  return "due";
+}
+function daysOf(b){
+  if(!b.checkIn || !b.checkOut) return "—";
+  const adIn = toTrueAdIso(b.checkIn, b.cal);
+  const adOut = toTrueAdIso(b.checkOut, b.cal);
+  if(!adIn || !adOut) return "—";
+  const a = new Date(adIn+'T00:00:00Z'), c = new Date(adOut+'T00:00:00Z');
+  const diff = Math.round((c-a)/(1000*60*60*24));
+  return diff>0 ? diff : "—";
+}
+function dDate(s, cal){
+  return displayDate(s, cal);
+}
+function monthBookings(mi){ return bookings.filter(b=>b.month===mi); }
+function monthTotals(mi){
+  const list = monthBookings(mi);
+  const collected = list.reduce((s,b)=>s+Number(b.collected||0),0);
+  const due = list.reduce((s,b)=>s+Math.max(0,Number(b.base||0)-Number(b.collected||0)),0);
+  const expected = list.reduce((s,b)=>s+Number(b.base||0),0);
+  return {collected, due, expected, count:list.length};
+}
+function monthExpenses(mi){ return expenses.filter(e=>e.month===mi); }
+function monthExpenseTotal(mi){
+  return monthExpenses(mi).reduce((s,e)=>s+Number(e.amount||0),0);
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1700);
+}
+
+/* ============ RENDER: BOOKINGS TAB ============ */
+function renderBookings(){
+  const mi = state.month;
+  const list = monthBookings(mi).slice().sort((a,b)=>(a.checkIn||"").localeCompare(b.checkIn||""));
+  const tot = monthTotals(mi);
+
+  let html = `
+    <button class="sync-btn" id="syncBtn" onclick="runSync()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v6h-6"/></svg>
+      Sync Booking.com & Agoda
+    </button>
+    <div class="summary-grid">
+      <div class="sum-box collected"><div class="label">Collected</div><div class="value mono">₨${fmt(tot.collected)}</div></div>
+      <div class="sum-box due"><div class="label">Due</div><div class="value mono">₨${fmt(tot.due)}</div></div>
+      <div class="sum-box"><div class="label">Bookings</div><div class="value mono">${tot.count}</div></div>
+    </div>
+  `;
+
+  if(list.length===0){
+    html += `
+      <div class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19V5a1 1 0 0 1 1-1h11l4 4v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z"/></svg>
+        <div class="t">No entries yet for ${NEPALI_MONTHS[mi]}</div>
+        <div class="s">Tap the + button to log a check-in, rent amount, and payment status.</div>
+      </div>`;
+  } else {
+    html += `<div class="card" style="padding:4px 14px;">`;
+    list.forEach(b=>{
+      const st = statusOf(b);
+      html += `
+        <div class="booking" data-id="${b.id}" onclick="openEdit('${b.id}')">
+          <div class="stamp sm ${st==='paid'?'occupied':'vacant'}">${b.room}</div>
+          <div class="booking-main">
+            <div class="booking-top">
+              <div class="tenant">${esc(b.name)||'Unnamed guest'}</div>
+              <div class="rent mono">₨${fmt(b.collected)}${st!=='paid' ? `<span style="color:var(--ink-soft);font-weight:500;"> / ${fmt(b.base)}</span>`:''}</div>
+            </div>
+            <div class="booking-sub">
+              <span class="mono">${dDate(b.checkIn, b.cal)} → ${dDate(b.checkOut, b.cal)}</span>
+              <span>·</span>
+              <span>${daysOf(b)} day${daysOf(b)===1?'':'s'}</span>
+              <span class="tag ${st}">${st}</span>
+            </div>
+          </div>
+        </div>`;
+    });
+    html += `</div>`;
+  }
+  document.getElementById('app').innerHTML = html;
+}
+
+/* ============ RENDER: ROOMS TAB ============ */
+function renderRooms(){
+  const mi = state.month;
+  const list = monthBookings(mi);
+  let html = `<div class="page-title">Rooms this month — ${NEPALI_MONTHS[mi]}</div><div class="room-grid">`;
+  ROOMS.forEach(r=>{
+    const stays = list.filter(b=>b.room===r);
+    const nights = stays.reduce((s,b)=>s + (typeof daysOf(b)==='number'?daysOf(b):0),0);
+    const collected = stays.reduce((s,b)=>s+Number(b.collected||0),0);
+    const occ = stays.length>0;
+    html += `
+      <div class="room-card">
+        <div class="top">
+          <div class="stamp ${occ?'occupied':'vacant'}">${r}</div>
+        </div>
+        <div class="meta">
+          <div><b>${stays.length}</b> booking${stays.length===1?'':'s'}</div>
+          <div><b>${nights}</b> nights filled</div>
+          <div>₨<b>${fmt(collected)}</b> collected</div>
+        </div>
+      </div>`;
+  });
+  html += `</div>`;
+
+  // all-time per room totals
+  const allTimeByRoom = {};
+  ROOMS.forEach(r=>allTimeByRoom[r]=0);
+  bookings.forEach(b=>{ if(allTimeByRoom[b.room]!==undefined) allTimeByRoom[b.room]+=Number(b.collected||0); });
+  const maxAll = Math.max(1,...Object.values(allTimeByRoom));
+
+  html += `<div class="section-divider"><span>All-time by room</span><div class="line"></div></div>`;
+  html += `<div class="chart-wrap">`;
+  ROOMS.forEach(r=>{
+    const v = allTimeByRoom[r];
+    html += `
+      <div class="bar-row">
+        <div class="bar-label">${r}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(v/maxAll*100).toFixed(1)}%"></div></div>
+        <div class="bar-val mono">₨${fmt(v)}</div>
+      </div>`;
+  });
+  html += `</div>`;
+  document.getElementById('app').innerHTML = html;
+}
+
+/* ============ RENDER: EXPENSES TAB ============ */
+function renderExpenses(){
+  const mi = state.month;
+  const list = monthExpenses(mi).slice().sort((a,b)=>(b.id||"").localeCompare(a.id||""));
+  const total = monthExpenseTotal(mi);
+  const byPayer = {};
+  list.forEach(e=>{ byPayer[e.paidBy||'Unassigned'] = (byPayer[e.paidBy||'Unassigned']||0) + Number(e.amount||0); });
+  const payerSummary = Object.entries(byPayer).map(([k,v])=>`${k}: ₨${fmt(v)}`).join(' · ');
+
+  let html = `
+    <div class="summary-grid">
+      <div class="sum-box due"><div class="label">Spent</div><div class="value mono">₨${fmt(total)}</div></div>
+      <div class="sum-box"><div class="label">Entries</div><div class="value mono">${list.length}</div></div>
+      <div class="sum-box"><div class="label">Net</div><div class="value mono">₨${fmt(monthTotals(mi).collected - total)}</div></div>
+    </div>
+  `;
+
+  if(list.length===0){
+    html += `
+      <div class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4Z"/></svg>
+        <div class="t">No expenses yet for ${NEPALI_MONTHS[mi]}</div>
+        <div class="s">Tap the + button to log a purchase, utility bill, or other spend.</div>
+      </div>`;
+  } else {
+    if(payerSummary){
+      html += `<div class="page-title" style="margin-bottom:8px;">By who paid — ${esc(payerSummary)}</div>`;
+    }
+    html += `<div class="card" style="padding:4px 14px;">`;
+    list.forEach(e=>{
+      html += `
+        <div class="booking" data-id="${e.id}" onclick="openEditExpense('${e.id}')">
+          <div class="stamp sm vacant" style="border-color:var(--brass-deep); color:var(--brass-deep); background:#FBF0DD;">${(e.category||'').slice(0,2).toUpperCase()}</div>
+          <div class="booking-main">
+            <div class="booking-top">
+              <div class="tenant">${esc(e.vendor) || esc(e.category) || 'Expense'}</div>
+              <div class="expense-amt mono">−₨${fmt(e.amount)}</div>
+            </div>
+            <div class="booking-sub">
+              <span class="cat-chip">${esc(e.category)}</span>
+              <span>·</span>
+              <span>${esc(e.method)}</span>
+              ${e.paidBy ? `<span>· paid by ${esc(e.paidBy)}</span>` : ''}
+              ${e.receipt ? `<span style="color:var(--brass-deep);">· 📎 receipt</span>` : ''}
+            </div>
+            ${e.note ? `<div class="booking-sub" style="margin-top:4px;">${esc(e.note)}</div>` : ''}
+          </div>
+        </div>`;
+    });
+    html += `</div>`;
+  }
+  document.getElementById('app').innerHTML = html;
+}
+
+
+/* ============ RENDER: CHARTS TAB ============ */
+function renderCharts(){
+  const monthData = NEPALI_MONTHS.map((name,i)=>({name, i, ...monthTotals(i), expenseTotal: monthExpenseTotal(i)}));
+  monthData.forEach(m=>{ m.net = m.collected - m.expenseTotal; });
+  const maxVal = Math.max(1, ...monthData.map(m=>Math.max(m.collected, m.due, m.expenseTotal)));
+  const yearTotal = monthData.reduce((s,m)=>s+m.collected,0);
+  const yearDue = monthData.reduce((s,m)=>s+m.due,0);
+  const yearExpenses = monthData.reduce((s,m)=>s+m.expenseTotal,0);
+  const yearNet = yearTotal - yearExpenses;
+
+  let html = `
+    <div class="summary-grid">
+      <div class="sum-box collected"><div class="label">Year collected</div><div class="value mono">₨${fmt(yearTotal)}</div></div>
+      <div class="sum-box due"><div class="label">Year spent</div><div class="value mono">₨${fmt(yearExpenses)}</div></div>
+      <div class="sum-box net-box ${yearNet>=0?'positive':'negative'}"><div class="label">Net profit</div><div class="value mono">₨${fmt(yearNet)}</div></div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Collected vs. spent — 2083</div>
+  `;
+  monthData.forEach(m=>{
+    html += `
+      <div class="bar-row">
+        <div class="bar-label">${m.name.slice(0,3)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(m.collected/maxVal*100).toFixed(1)}%"></div></div>
+        <div class="bar-val mono">₨${fmt(m.collected)}</div>
+      </div>`;
+    if(m.expenseTotal>0){
+      html += `
+      <div class="bar-row" style="margin-top:-3px; margin-bottom:12px;">
+        <div class="bar-label"></div>
+        <div class="bar-track" style="height:10px;"><div class="bar-fill" style="width:${(m.expenseTotal/maxVal*100).toFixed(1)}%; background:linear-gradient(90deg, #8a8270, var(--ink-soft)); height:100%;"></div></div>
+        <div class="bar-val mono" style="color:var(--ink-soft); font-size:10.5px;">−₨${fmt(m.expenseTotal)}</div>
+      </div>`;
+    }
+  });
+  html += `</div>`;
+
+  html += `<div class="section-divider"><span>Net profit by month</span><div class="line"></div></div><div class="chart-wrap">`;
+  const maxNet = Math.max(1, ...monthData.map(m=>Math.abs(m.net)));
+  monthData.forEach(m=>{
+    if(m.collected===0 && m.expenseTotal===0) return;
+    const isNeg = m.net < 0;
+    html += `
+      <div class="bar-row">
+        <div class="bar-label">${m.name.slice(0,3)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(Math.abs(m.net)/maxNet*100).toFixed(1)}%; background:${isNeg ? 'linear-gradient(90deg, var(--red), #7a3530)' : 'linear-gradient(90deg, var(--sage), #3f5a3f)'};"></div></div>
+        <div class="bar-val mono" style="color:${isNeg?'var(--red)':'var(--sage)'}">${isNeg?'−':''}₨${fmt(Math.abs(m.net))}</div>
+      </div>`;
+  });
+  html += `</div>`;
+
+  const dueMonths = monthData.filter(m=>m.due>0);
+  if(dueMonths.length){
+    html += `<div class="section-divider"><span>Outstanding dues</span><div class="line"></div></div><div class="chart-wrap">`;
+    dueMonths.forEach(m=>{
+      html += `
+        <div class="bar-row">
+          <div class="bar-label">${m.name.slice(0,3)}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(m.due/maxVal*100).toFixed(1)}%; background:linear-gradient(90deg, var(--red), #7a3530);"></div></div>
+          <div class="bar-val mono" style="color:var(--red)">₨${fmt(m.due)}</div>
+        </div>`;
+    });
+    html += `</div>`;
+  }
+  document.getElementById('app').innerHTML = html;
+}
+
+/* ============ RENDER: MONTHS TAB ============ */
+function renderMonths(){
+  let html = `<div class="page-title">Choose a month — Nepali calendar 2083</div><div class="card" style="padding:4px 14px;">`;
+  NEPALI_MONTHS.forEach((name,i)=>{
+    const tot = monthTotals(i);
+    html += `
+      <div class="booking" onclick="selectMonth(${i})" style="cursor:pointer;">
+        <div class="stamp sm ${tot.count>0?'occupied':'vacant'}">${(i+1).toString().padStart(2,'0')}</div>
+        <div class="booking-main">
+          <div class="booking-top">
+            <div class="tenant">${name}</div>
+            <div class="rent mono">₨${fmt(tot.collected)}</div>
+          </div>
+          <div class="booking-sub">
+            <span>${tot.count} booking${tot.count===1?'':'s'}</span>
+            ${tot.due>0?`<span class="tag due">₨${fmt(tot.due)} due</span>`:''}
+          </div>
+        </div>
+      </div>`;
+  });
+  html += `</div>`;
+  document.getElementById('app').innerHTML = html;
+}
+function selectMonth(i){
+  state.month = i; saveState();
+  document.getElementById('monthPill').textContent = `${NEPALI_MONTHS[i]} 2083`;
+  switchTab('bookings');
+}
+
+/* ============ TAB SWITCHING ============ */
+function switchTab(tab){
+  state.tab = tab; saveState();
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
+  document.getElementById('fabAdd').style.display = (tab==='bookings' || tab==='expenses') ? 'flex' : 'none';
+  if(tab==='bookings') renderBookings();
+  else if(tab==='rooms') renderRooms();
+  else if(tab==='expenses') renderExpenses();
+  else if(tab==='charts') renderCharts();
+  else if(tab==='months') renderMonths();
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>switchTab(t.dataset.tab)));
+
+/* ============ ADD / EDIT SHEET ============ */
+function esc(s){ return (s||'').toString().replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+
+function openAdd(){
+  if(state.tab === 'expenses'){ openAddExpense(); return; }
+  editingId = null;
+  renderSheet({room:ROOMS[0], name:'', checkIn:'', checkOut:'', cal: state.dateFormat || 'AD', base:'', collected:'', status:'paid', channel:'Direct', pay:'Cash', month:state.month});
+}
+function openEdit(id){
+  editingId = id;
+  const b = bookings.find(x=>x.id===id);
+  if(b) renderSheet(b);
+}
+function closeSheet(){
+  document.getElementById('sheetBackdrop').classList.remove('open');
+}
+document.getElementById('sheetBackdrop').addEventListener('click', e=>{
+  if(e.target.id==='sheetBackdrop') closeSheet();
+});
+
+function renderSheet(b){
+  const isEdit = !!editingId;
+  const html = `
+    <div class="sheet-handle"></div>
+    <h2>${isEdit ? 'Edit booking' : 'New booking'}</h2>
+
+    <div class="field">
+      <label>Room</label>
+      <div class="room-picker" id="roomPicker">
+        ${ROOMS.map(r=>`<button type="button" class="room-opt ${r===b.room?'selected':''}" data-room="${r}">${r}</button>`).join('')}
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Guest name</label>
+      <input type="text" id="f_name" value="${esc(b.name)}" placeholder="e.g. Bishal Chhetri">
+    </div>
+
+    <div class="field">
+      <div class="date-field-head">
+        <label style="margin-bottom:0;">Check-in</label>
+        <div class="cal-mini-toggle" id="calToggleIn">
+          <button type="button" class="cal-mini-opt" data-cal="AD">A.D.</button>
+          <button type="button" class="cal-mini-opt" data-cal="BS">B.S.</button>
+        </div>
+      </div>
+      <div id="dateAreaIn"></div>
+      <div class="date-convert-preview" id="previewIn"></div>
+    </div>
+
+    <div class="field">
+      <div class="date-field-head">
+        <label style="margin-bottom:0;">Check-out</label>
+        <div class="cal-mini-toggle" id="calToggleOut">
+          <button type="button" class="cal-mini-opt" data-cal="AD">A.D.</button>
+          <button type="button" class="cal-mini-opt" data-cal="BS">B.S.</button>
+        </div>
+      </div>
+      <div id="dateAreaOut"></div>
+      <div class="date-convert-preview" id="previewOut"></div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Base rent (₨)</label>
+        <input type="number" id="f_base" value="${b.base||''}" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label>Collected (₨)</label>
+        <input type="number" id="f_collected" value="${b.collected||''}" placeholder="0" inputmode="numeric">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Payment status</label>
+      <div class="status-picker" id="statusPicker">
+        <button type="button" class="status-opt paid ${statusOf(b)==='paid'?'selected':''}" data-st="paid">Paid</button>
+        <button type="button" class="status-opt partial ${statusOf(b)==='partial'?'selected':''}" data-st="partial">Partial</button>
+        <button type="button" class="status-opt due ${statusOf(b)==='due'?'selected':''}" data-st="due">Due</button>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Channel</label>
+        <select id="f_channel">
+          ${['Direct','Booking','Agoda','Walk-in','Other'].map(c=>`<option ${c===b.channel?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Payment method</label>
+        <select id="f_pay">
+          ${['Cash','Esewa','Phonepay','Nabil Bank','Atm','Agoda','Other'].map(c=>`<option ${c===b.pay?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Month</label>
+      <select id="f_month">
+        ${NEPALI_MONTHS.map((m,i)=>`<option value="${i}" ${i===b.month?'selected':''}>${m}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="btn-row">
+      ${isEdit ? `<button type="button" class="btn-ghost" id="deleteBtn" style="color:var(--red); border-color:var(--red);">Delete</button>` : ''}
+      <button type="button" class="btn-primary" id="saveBtn">${isEdit?'Save changes':'Add booking'}</button>
+    </div>
+  `;
+  document.getElementById('sheet').innerHTML = html;
+  document.getElementById('sheetBackdrop').classList.add('open');
+
+  /* ---- Dual A.D./B.S. date entry widget ---- */
+  // Each booking stores ONE calendar tag (b.cal) shared by both dates, since in
+  // practice a person enters both check-in/out in the same calendar in one sitting.
+  let entryCal = b.cal || 'AD';
+  const dateState = { checkIn: b.checkIn || '', checkOut: b.checkOut || '' };
+
+  function bsPartsFromAdIso(adIso){
+    if(!adIso) return null;
+    const bs = adToBs(adIso);
+    return bs;
+  }
+  function buildYearOptions(centerYear){
+    const opts = [];
+    for(let y=BS_MIN_YEAR; y<=BS_MAX_YEAR; y++) opts.push(y);
+    return opts;
+  }
+  function renderDateInput(key, areaId, previewId){
+    const area = document.getElementById(areaId);
+    const currentVal = dateState[key]; // stored in entryCal's terms
+    if(entryCal === 'AD'){
+      area.innerHTML = `<input type="date" class="dateInput" data-key="${key}" value="${currentVal||''}">`;
+      const inp = area.querySelector('.dateInput');
+      inp.addEventListener('change', ()=>{
+        dateState[key] = inp.value;
+        updatePreview(key, previewId);
+      });
+    } else {
+      // BS mode: year/month/day selects
+      let bsParts = null;
+      if(currentVal){
+        const [yy,mm,dd] = currentVal.split('-').map(Number);
+        bsParts = {year:yy, month:mm, day:dd};
+      }
+      const todayBs = adToBs(new Date().toISOString().slice(0,10)) || {year:2083,month:1,day:1};
+      const yr = bsParts ? bsParts.year : todayBs.year;
+      const mo = bsParts ? bsParts.month : todayBs.month;
+      const dimArr = DAYS_IN_MONTH_BS[yr] || DAYS_IN_MONTH_BS[todayBs.year];
+      const dayCount = dimArr ? dimArr[mo-1] : 30;
+      const dy = bsParts ? Math.min(bsParts.day, dayCount) : todayBs.day;
+
+      area.innerHTML = `
+        <div class="bs-select-row">
+          <select class="bsYear" data-key="${key}">
+            ${buildYearOptions().map(y=>`<option value="${y}" ${y===yr?'selected':''}>${y}</option>`).join('')}
+          </select>
+          <select class="bsMonth" data-key="${key}">
+            ${NEPALI_MONTHS.map((m,i)=>`<option value="${i+1}" ${i+1===mo?'selected':''}>${m}</option>`).join('')}
+          </select>
+          <select class="bsDay" data-key="${key}">
+            ${Array.from({length:dayCount},(_,i)=>i+1).map(d=>`<option value="${d}" ${d===dy?'selected':''}>${d}</option>`).join('')}
+          </select>
+        </div>`;
+      function syncFromSelects(){
+        const yEl = area.querySelector('.bsYear'), mEl = area.querySelector('.bsMonth'), dEl = area.querySelector('.bsDay');
+        const y = Number(yEl.value), m = Number(mEl.value);
+        const dim = (DAYS_IN_MONTH_BS[y]||[])[m-1] || 30;
+        // rebuild day options if month/year changed and day count differs
+        const currentDayOptCount = dEl.options.length;
+        if(currentDayOptCount !== dim){
+          const keepDay = Math.min(Number(dEl.value)||1, dim);
+          dEl.innerHTML = Array.from({length:dim},(_,i)=>i+1).map(d=>`<option value="${d}" ${d===keepDay?'selected':''}>${d}</option>`).join('');
+        }
+        const d = Number(dEl.value);
+        dateState[key] = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        updatePreview(key, previewId);
+      }
+      area.querySelectorAll('select').forEach(sel=>sel.addEventListener('change', syncFromSelects));
+      // ensure dateState has an initial value even before user touches selects
+      if(!currentVal) syncFromSelects();
+    }
+    updatePreview(key, previewId);
+  }
+  function updatePreview(key, previewId){
+    const el = document.getElementById(previewId);
+    const val = dateState[key];
+    if(!val){ el.textContent=''; return; }
+    if(entryCal === 'AD'){
+      const bsIso = adIsoToBsIso(val);
+      if(!bsIso){ el.textContent = 'Outside convertible range (1913–2034 AD)'; el.classList.add('invalid'); return; }
+      const [y,m,d] = bsIso.split('-');
+      el.classList.remove('invalid');
+      el.textContent = `= ${d} ${NEPALI_MONTHS[Number(m)-1]} ${y} B.S.`;
+    } else {
+      const [y,m,d] = val.split('-').map(Number);
+      const adIso = bsToAdIso(y,m,d);
+      if(!adIso){ el.textContent = 'Invalid B.S. date'; el.classList.add('invalid'); return; }
+      const [ay,am,ad] = adIso.split('-');
+      el.classList.remove('invalid');
+      const monthNamesAd = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      el.textContent = `= ${ad} ${monthNamesAd[Number(am)-1]} ${ay} A.D.`;
+    }
+  }
+  function refreshCalMiniToggles(){
+    document.querySelectorAll('#calToggleIn .cal-mini-opt, #calToggleOut .cal-mini-opt').forEach(el=>{
+      el.classList.toggle('selected', el.dataset.cal === entryCal);
+    });
+  }
+  function rerenderBothDateInputs(){
+    renderDateInput('checkIn', 'dateAreaIn', 'previewIn');
+    renderDateInput('checkOut', 'dateAreaOut', 'previewOut');
+  }
+  function switchEntryCal(newCal){
+    if(newCal === entryCal) return;
+    // convert currently-held values into the new calendar so nothing is lost
+    ['checkIn','checkOut'].forEach(key=>{
+      const val = dateState[key];
+      if(!val) return;
+      if(entryCal === 'AD' && newCal === 'BS'){
+        const bsIso = adIsoToBsIso(val);
+        if(bsIso) dateState[key] = bsIso;
+      } else if(entryCal === 'BS' && newCal === 'AD'){
+        const [y,m,d] = val.split('-').map(Number);
+        const adIso = bsToAdIso(y,m,d);
+        if(adIso) dateState[key] = adIso;
+      }
+    });
+    entryCal = newCal;
+    refreshCalMiniToggles();
+    rerenderBothDateInputs();
+  }
+  document.querySelectorAll('#calToggleIn .cal-mini-opt, #calToggleOut .cal-mini-opt').forEach(el=>{
+    el.addEventListener('click', ()=>switchEntryCal(el.dataset.cal));
+  });
+  refreshCalMiniToggles();
+  rerenderBothDateInputs();
+
+  let selectedRoom = b.room;
+  let selectedStatus = statusOf(b);
+  document.querySelectorAll('#roomPicker .room-opt').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      selectedRoom = el.dataset.room;
+      document.querySelectorAll('#roomPicker .room-opt').forEach(x=>x.classList.remove('selected'));
+      el.classList.add('selected');
+    });
+  });
+  document.querySelectorAll('#statusPicker .status-opt').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      selectedStatus = el.dataset.st;
+      document.querySelectorAll('#statusPicker .status-opt').forEach(x=>x.classList.remove('selected'));
+      el.classList.add('selected');
+      // auto-fill collected based on status choice if collected is empty/zero
+      const baseVal = Number(document.getElementById('f_base').value||0);
+      const collEl = document.getElementById('f_collected');
+      if(selectedStatus==='paid') collEl.value = baseVal||collEl.value;
+      if(selectedStatus==='due') collEl.value = 0;
+    });
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', ()=>{
+    const name = document.getElementById('f_name').value.trim();
+    const checkIn = dateState.checkIn;
+    const checkOut = dateState.checkOut;
+    const base = Number(document.getElementById('f_base').value||0);
+    let collected = Number(document.getElementById('f_collected').value||0);
+    const channel = document.getElementById('f_channel').value;
+    const pay = document.getElementById('f_pay').value;
+    const month = Number(document.getElementById('f_month').value);
+
+    if(!name){ toast('Add a guest name'); return; }
+    if(!checkIn){ toast('Add a check-in date'); return; }
+
+    const rec = {
+      id: editingId || Math.random().toString(36).slice(2,9),
+      room: selectedRoom, name, checkIn, checkOut, cal: entryCal, base, collected,
+      channel, pay, month
+    };
+
+    if(editingId){
+      const idx = bookings.findIndex(x=>x.id===editingId);
+      bookings[idx] = rec;
+      toast('Booking updated');
+    } else {
+      bookings.push(rec);
+      toast('Booking added');
+    }
+    saveBookings();
+    closeSheet();
+    switchTab(state.tab);
+  });
+
+  const delBtn = document.getElementById('deleteBtn');
+  if(delBtn){
+    delBtn.addEventListener('click', ()=>{
+      bookings = bookings.filter(x=>x.id!==editingId);
+      saveBookings();
+      closeSheet();
+      toast('Booking deleted');
+      switchTab(state.tab);
+    });
+  }
+}
+
+/* ============ OTA SYNC (Booking.com + Agoda) ============ */
+function loadIgnoredUids(){
+  try{ return JSON.parse(localStorage.getItem(SYNC_IGNORED_KEY)) || []; }
+  catch(e){ return []; }
+}
+function saveIgnoredUids(arr){ localStorage.setItem(SYNC_IGNORED_KEY, JSON.stringify(arr)); }
+
+// A booking already exists if any saved booking shares the same room + checkIn (after
+// converting both to true AD) — this is how we avoid re-suggesting something already added.
+function isAlreadyTracked(room, checkInAdIso){
+  return bookings.some(b=>{
+    if(b.room !== room) return false;
+    const existingAd = toTrueAdIso(b.checkIn, b.cal);
+    return existingAd === checkInAdIso;
+  });
+}
+
+async function runSync(){
+  const btn = document.getElementById('syncBtn');
+  if(!btn) return;
+  const originalHtml = btn.innerHTML;
+  btn.innerHTML = `<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v6h-6"/></svg> Checking Booking.com & Agoda…`;
+  btn.disabled = true;
+
+  try{
+    const resp = await fetch(SYNC_WORKER_URL, { cache: 'no-store' });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    const ignored = loadIgnoredUids();
+
+    // Flatten into a single list of new, not-yet-tracked, not-ignored bookings
+    const found = [];
+    (data.rooms || []).forEach(r=>{
+      (r.bookings || []).forEach(b=>{
+        if(ignored.includes(b.uid)) return;
+        if(isAlreadyTracked(r.room, b.checkIn)) return;
+        found.push({ room: r.room, checkIn: b.checkIn, checkOut: b.checkOut, source: b.source, uid: b.uid });
+      });
+    });
+    // Sort by check-in date, soonest first
+    found.sort((a,b)=>a.checkIn.localeCompare(b.checkIn));
+
+    renderSyncResults(found, data.generatedAt);
+  }catch(err){
+    toast("Couldn't reach the sync service — check your connection");
+  }finally{
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+  }
+}
+
+function renderSyncResults(found, generatedAt){
+  const byRoom = {};
+  found.forEach(f=>{
+    if(!byRoom[f.room]) byRoom[f.room] = [];
+    byRoom[f.room].push(f);
+  });
+  const roomKeys = Object.keys(byRoom).sort();
+
+  let body;
+  if(found.length === 0){
+    body = `<div class="sync-empty">No new external bookings found.<br>Everything's already up to date.</div>`;
+  } else {
+    body = roomKeys.map(room=>{
+      const items = byRoom[room].map(f=>`
+        <div class="sync-item" data-uid="${esc(f.uid)}">
+          <div class="info">
+            <div class="dates">${dDate(f.checkIn,'AD')} → ${dDate(f.checkOut,'AD')}</div>
+            <div class="src">via ${esc(f.source)}</div>
+          </div>
+          <button type="button" class="sync-add-btn" onclick="addFromSync('${esc(f.room)}','${esc(f.checkIn)}','${esc(f.checkOut)}','${esc(f.source)}','${esc(f.uid)}', this)">+ Add</button>
+        </div>`).join('');
+      return `<div class="sync-room-group"><div class="sync-room-head">Room ${esc(room)}</div>${items}</div>`;
+    }).join('');
+  }
+
+  const html = `
+    <div class="sheet-handle"></div>
+    <h2>External bookings</h2>
+    <p style="font-size:12px; color:var(--ink-soft); margin:-8px 0 14px;">
+      Dates only — Booking.com and Agoda don't share guest name or price. Add each one, then fill those in.
+    </p>
+    ${body}
+    <button type="button" class="btn-primary" id="closeSyncBtn" style="margin-top:16px;">Done</button>
+  `;
+  document.getElementById('sheet').innerHTML = html;
+  document.getElementById('sheetBackdrop').classList.add('open');
+  document.getElementById('closeSyncBtn').addEventListener('click', closeSheet);
+}
+
+// Called when the person taps "+ Add" on a synced booking — opens the normal
+// booking form pre-filled with room + dates (in AD, since that's what the feed gives us),
+// so they just need to add the guest name, rent, and payment status themselves.
+function addFromSync(room, checkIn, checkOut, source, uid, btnEl){
+  closeSheet();
+  editingId = null;
+  renderSheet({
+    room, name: '', checkIn, checkOut, cal: 'AD',
+    base:'', collected:'', status:'due', channel: source==='booking.com' ? 'Booking' : 'Agoda',
+    pay:'Cash', month: state.month
+  });
+  // Mark this uid as handled so it won't show again even if they cancel without saving;
+  // they can always re-sync to bring it back if truly needed.
+  const ignored = loadIgnoredUids();
+  if(!ignored.includes(uid)){ ignored.push(uid); saveIgnoredUids(ignored); }
+}
+
+document.getElementById('fabAdd').addEventListener('click', openAdd);
+
+/* ============ EXPENSE ADD / EDIT SHEET ============ */
+function openAddExpense(){
+  editingExpenseId = null;
+  renderExpenseSheet({amount:'', category:EXPENSE_CATEGORIES[0], vendor:'', paidBy:'', method:'Cash', month:state.month, note:''});
+}
+function openEditExpense(id){
+  editingExpenseId = id;
+  const e = expenses.find(x=>x.id===id);
+  if(e) renderExpenseSheet(e);
+}
+
+function renderExpenseSheet(e){
+  const isEdit = !!editingExpenseId;
+  const hasReceipt = !!e.receipt;
+  const html = `
+    <div class="sheet-handle"></div>
+    <h2>${isEdit ? 'Edit expense' : 'New expense'}</h2>
+
+    <div class="field">
+      <label>Receipt</label>
+      <div id="receiptArea">
+        ${hasReceipt ? `
+          <div class="receipt-preview" id="receiptPreview">
+            <img src="${e.receipt}" alt="Receipt photo">
+            <button type="button" class="remove-receipt" id="removeReceiptBtn" aria-label="Remove receipt">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        ` : `
+          <div class="receipt-slot" id="receiptSlot">
+            <div class="icon-circle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h2l1.5-2h9L18 7h2a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            </div>
+            <div class="hint">Snap the receipt to keep a digital copy</div>
+            <div class="receipt-btn-row">
+              <button type="button" class="receipt-btn" id="attachReceiptBtn" style="flex:1;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h2l1.5-2h9L18 7h2a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+                Add receipt photo
+              </button>
+            </div>
+          </div>
+        `}
+        <input type="file" id="receiptFileAttach" accept="image/*" capture="environment" style="display:none;">
+      </div>
+      <div id="scanStatusArea"></div>
+    </div>
+
+    <div class="field">
+      <label>Category</label>
+      <div class="cat-picker" id="catPicker">
+        ${EXPENSE_CATEGORIES.map(c=>`<button type="button" class="cat-opt ${c===e.category?'selected':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Amount (₨)</label>
+        <input type="number" id="ex_amount" value="${e.amount||''}" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label>Month</label>
+        <select id="ex_month">
+          ${NEPALI_MONTHS.map((m,i)=>`<option value="${i}" ${i===e.month?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Vendor / paid to</label>
+      <input type="text" id="ex_vendor" value="${esc(e.vendor)}" placeholder="e.g. local hardware store">
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Paid by</label>
+        <input type="text" id="ex_paidby" value="${esc(e.paidBy)}" placeholder="e.g. Sarina, Jeewan">
+      </div>
+      <div class="field">
+        <label>Payment method</label>
+        <select id="ex_method">
+          ${['Cash','Esewa','Phonepay','Nabil Bank','Atm','Other'].map(c=>`<option ${c===e.method?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Note</label>
+      <input type="text" id="ex_note" value="${esc(e.note)}" placeholder="optional detail">
+    </div>
+
+    <div class="btn-row">
+      ${isEdit ? `<button type="button" class="btn-ghost" id="deleteExBtn" style="color:var(--red); border-color:var(--red);">Delete</button>` : ''}
+      <button type="button" class="btn-primary" id="saveExBtn">${isEdit?'Save changes':'Add expense'}</button>
+    </div>
+  `;
+  document.getElementById('sheet').innerHTML = html;
+  document.getElementById('sheetBackdrop').classList.add('open');
+
+  let selectedCat = e.category;
+  let receiptData = e.receipt || null;
+  document.querySelectorAll('#catPicker .cat-opt').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      selectedCat = el.dataset.cat;
+      document.querySelectorAll('#catPicker .cat-opt').forEach(x=>x.classList.remove('selected'));
+      el.classList.add('selected');
+    });
+  });
+
+  /* ---- Receipt capture wiring ---- */
+  function setScanStatus(html){
+    document.getElementById('scanStatusArea').innerHTML = html;
+  }
+  function showReceiptPreview(dataUrl){
+    receiptData = dataUrl;
+    document.getElementById('receiptArea').innerHTML = `
+      <div class="receipt-preview" id="receiptPreview">
+        <img src="${dataUrl}" alt="Receipt photo">
+        <button type="button" class="remove-receipt" id="removeReceiptBtn" aria-label="Remove receipt">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <input type="file" id="receiptFileAttach" accept="image/*" capture="environment" style="display:none;">
+    `;
+    wireRemoveReceipt();
+  }
+  function showReceiptSlot(){
+    receiptData = null;
+    document.getElementById('receiptArea').innerHTML = `
+      <div class="receipt-slot" id="receiptSlot">
+        <div class="icon-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h2l1.5-2h9L18 7h2a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        </div>
+        <div class="hint">Snap the receipt to keep a digital copy</div>
+        <div class="receipt-btn-row">
+          <button type="button" class="receipt-btn" id="attachReceiptBtn" style="flex:1;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h2l1.5-2h9L18 7h2a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            Add receipt photo
+          </button>
+        </div>
+      </div>
+      <input type="file" id="receiptFileAttach" accept="image/*" capture="environment" style="display:none;">
+    `;
+    wireSlotButtons();
+  }
+
+  // Resize/compress image client-side so localStorage doesn't bloat
+  function resizeImage(file, maxDim){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        const img = new Image();
+        img.onload = ()=>{
+          let w = img.width, h = img.height;
+          if(w > h && w > maxDim){ h = Math.round(h * maxDim/w); w = maxDim; }
+          else if(h > maxDim){ w = Math.round(w * maxDim/h); h = maxDim; }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.72));
+        };
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleAttachOnly(file){
+    if(!file) return;
+    try{
+      const dataUrl = await resizeImage(file, 1400);
+      showReceiptPreview(dataUrl);
+      setScanStatus('');
+    }catch(err){
+      toast('Could not load that photo');
+    }
+  }
+
+  function wireSlotButtons(){
+    const attachBtn = document.getElementById('attachReceiptBtn');
+    const fileAttach = document.getElementById('receiptFileAttach');
+    if(attachBtn) attachBtn.addEventListener('click', ()=>fileAttach.click());
+    if(fileAttach) fileAttach.addEventListener('change', (ev)=>handleAttachOnly(ev.target.files[0]));
+  }
+  function wireRemoveReceipt(){
+    const removeBtn = document.getElementById('removeReceiptBtn');
+    if(removeBtn) removeBtn.addEventListener('click', ()=>{ showReceiptSlot(); setScanStatus(''); });
+  }
+  if(hasReceipt) wireRemoveReceipt();
+  else wireSlotButtons();
+
+  document.getElementById('saveExBtn').addEventListener('click', ()=>{
+    const amount = Number(document.getElementById('ex_amount').value||0);
+    const vendor = document.getElementById('ex_vendor').value.trim();
+    const paidBy = document.getElementById('ex_paidby').value.trim();
+    const method = document.getElementById('ex_method').value;
+    const month = Number(document.getElementById('ex_month').value);
+    const note = document.getElementById('ex_note').value.trim();
+
+    if(!amount){ toast('Add an amount'); return; }
+
+    const rec = {
+      id: editingExpenseId || Math.random().toString(36).slice(2,9),
+      amount, category: selectedCat, vendor, paidBy, method, month, note,
+      receipt: receiptData || null
+    };
+
+    if(editingExpenseId){
+      const idx = expenses.findIndex(x=>x.id===editingExpenseId);
+      expenses[idx] = rec;
+      toast('Expense updated');
+    } else {
+      expenses.push(rec);
+      toast('Expense added');
+    }
+    try{
+      saveExpenses();
+    }catch(err){
+      toast('Saved, but receipt image was too large to store');
+      rec.receipt = null;
+      if(editingExpenseId){ expenses[expenses.findIndex(x=>x.id===editingExpenseId)] = rec; }
+      else { expenses[expenses.length-1] = rec; }
+      saveExpenses();
+    }
+    closeSheet();
+    switchTab(state.tab);
+  });
+
+  const delExBtn = document.getElementById('deleteExBtn');
+  if(delExBtn){
+    delExBtn.addEventListener('click', ()=>{
+      expenses = expenses.filter(x=>x.id!==editingExpenseId);
+      saveExpenses();
+      closeSheet();
+      toast('Expense deleted');
+      switchTab(state.tab);
+    });
+  }
+}
+
+/* ============ INIT ============ */
+document.getElementById('monthPill').textContent = `${NEPALI_MONTHS[state.month]} 2083`;
+
+function refreshCalToggleUI(){
+  document.querySelectorAll('#calToggle .cal-toggle-opt').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.fmt === state.dateFormat);
+  });
+}
+document.querySelectorAll('#calToggle .cal-toggle-opt').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    state.dateFormat = el.dataset.fmt;
+    saveState();
+    refreshCalToggleUI();
+    switchTab(state.tab);
+  });
+});
+refreshCalToggleUI();
+
+switchTab(state.tab || 'bookings');
+</script>
+</body>
+</html>
